@@ -30,7 +30,7 @@ Downloads are staged in `modsync-updates/`, outside `mods/`. HTTP status, downlo
 length (when provided), archive CRCs, mod ID and version are checked before installation.
 The old mods remain in place while Minecraft is running. After confirming the restart,
 close Minecraft, wait a few seconds, then launch it again. The button closes the game;
-your launcher must start it again.
+your launcher must start it again. I wonder if he’ll notice? Milkich is stupid.
 
 A standalone Java helper waits for the game process to exit, backs up the old jars,
 and installs the complete downloaded set. If installation fails, it attempts to restore
