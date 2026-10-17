@@ -23,7 +23,7 @@ class ModsUpdatingScreen : GenericWaitingScreen(
         val t = ClientTempStorageManager.getInstance()
         val tr = t.downloadReadBytes
         val tt = t.downloadTotalBytes
-        if (tt != null) {
+        if (tt != null && tt > 0) {
             val c = Component.literal("$tr / $tt (${(tr.toFloat() / tt * 100).roundToInt()}%)")
             graphics.centeredText(this.minecraft.font, c, this.width / 2, 142, ARGB.color(1f, TextColor.GREEN.value))
         }

@@ -47,6 +47,7 @@ public class ConnectScreenMixin extends Screen implements IConnectScreen {
 
     @Inject(method = "connect", at = @At("HEAD"))
     private void saveServerHost(Minecraft minecraft, ServerAddress hostAndPort, ServerData server, TransferState transferState, CallbackInfo ci) {
+        ClientTempStorageManager.getInstance().setConnectionAttempt(ClientTempStorageManager.getInstance().getConnectionAttempt() + 1);
         ClientTempStorageManager.getInstance().setServerHost(hostAndPort.getHost());
         ClientTempStorageManager.getInstance().setServerPort(hostAndPort.getPort());
     }

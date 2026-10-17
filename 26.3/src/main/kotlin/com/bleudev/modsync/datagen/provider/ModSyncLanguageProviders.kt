@@ -19,7 +19,9 @@ class ModSyncDefaultLanguageProvider(
         builder.add("modsync.update.wait.running", "Updating mods")
         builder.add("modsync.update.wait.running.wait", "Please wait")
         builder.add("modsync.update.end.restart", "Restart Minecraft")
-        builder.add("modsync.update.end.restart.more", "To join this server, you must restart game")
+        builder.add("modsync.update.end.restart.more", "Close Minecraft to install the downloaded mods. Wait a few seconds before launching it again.")
+        builder.add("modsync.update.error.title", "Mod update failed")
+        builder.add("modsync.update.error.message", "Could not update mods from %s.\n%s\nCheck the ModSync HTTP port and logs/latest.log. Installed mods were not changed.")
         builder.add("modsync.update.end.restart.yes", "Restart")
         builder.add("modsync.update.end.restart.no", "Later")
     }
@@ -39,7 +41,9 @@ class ModSyncRuLanguageProvider(
         builder.add("modsync.update.wait.running", "Обновление модов")
         builder.add("modsync.update.wait.running.wait", "Пожалуйста подождите")
         builder.add("modsync.update.end.restart", "Перезапустите Minecraft")
-        builder.add("modsync.update.end.restart.more", "Чтобы присоединиться к этому серверу необходимо перезапустить игру")
+        builder.add("modsync.update.end.restart.more", "Закройте Minecraft для установки скачанных модов. Подождите несколько секунд перед повторным запуском.")
+        builder.add("modsync.update.error.title", "Не удалось обновить моды")
+        builder.add("modsync.update.error.message", "Не удалось обновить моды с %s.\n%s\nПроверьте HTTP-порт ModSync и logs/latest.log. Установленные моды не изменены.")
         builder.add("modsync.update.end.restart.yes", "Перезапустить")
         builder.add("modsync.update.end.restart.no", "Позже")
     }

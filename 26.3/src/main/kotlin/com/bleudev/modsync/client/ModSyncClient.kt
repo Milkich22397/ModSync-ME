@@ -1,6 +1,7 @@
 package com.bleudev.modsync.client
 
 import com.bleudev.modsync.client.custom.gui.screens.ModsUpdatingScreen
+import com.bleudev.modsync.LOGGER_GENERAL
 import com.bleudev.modsync.client.util.ModSyncer
 import com.bleudev.modsync.client.util.cancel
 import com.bleudev.modsync.client.util.closeScreen
@@ -14,6 +15,8 @@ import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.ConfirmScreen
 import net.minecraft.client.gui.screens.ConnectScreen
+import net.minecraft.client.gui.screens.DisconnectedScreen
+import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.network.chat.Component
 
 class ModSyncClient : ClientModInitializer {
@@ -22,17 +25,36 @@ class ModSyncClient : ClientModInitializer {
     private var updateAddress: String = ""
     private var toUpdate: List<ModSyncMetadata.ModMetadata> = listOf()
     private var updating: Boolean = false
+    private var resultAttempt: Long = -1
 
     override fun onInitializeClient() {
         ClientConfigurationNetworking.registerGlobalReceiver(ModSyncInfo.TYPE) { payload, _ ->
             val host = ClientTempStorageManager.getInstance().serverHost ?: return@registerGlobalReceiver
-            updateAddress = "http://$host:${payload.port}"
-            toUpdate = ModSyncer.getInstance().fetch(updateAddress)
+            val state = ClientTempStorageManager.getInstance()
+            val attempt = state.connectionAttempt
+            val address = java.net.URI("http", null, host, payload.port, null, null, null).toString()
+            Thread({
+                try {
+                    val mods = ModSyncer.getInstance().fetch(address)
+                    Minecraft.getInstance().execute {
+                        if (state.connectionAttempt == attempt && !updating) {
+                            updateAddress = address
+                            toUpdate = mods
+                            resultAttempt = attempt
+                        }
+                    }
+                } catch (error: Exception) {
+                    LOGGER_GENERAL.error("Could not fetch ModSync metadata from $address", error)
+                    Minecraft.getInstance().execute {
+                        if (state.connectionAttempt == attempt) showUpdateError(address, error)
+                    }
+                }
+            }, "ModSync metadata").apply { isDaemon = true; start() }
         }
         ClientTickEvents.END_CLIENT_TICK.register { mc ->
             val already = ClientTempStorageManager.getInstance().serverAddress in requireRestartAddresses
             if (!updating) {
-                if (updateAddress.isNotEmpty() && toUpdate.isNotEmpty() && !already) {
+                if (resultAttempt == ClientTempStorageManager.getInstance().connectionAttempt && updateAddress.isNotEmpty() && toUpdate.isNotEmpty() && !already) {
                     updating = true
                     mc.ensureCancelConnect()
                     mc.disconnect(confirmUpdateScreen(), true)
@@ -67,18 +89,27 @@ class ModSyncClient : ClientModInitializer {
                 if (it) {
                     val already = ClientTempStorageManager.getInstance().serverAddress in requireRestartAddresses
                     if (updateAddress.isNotEmpty() && toUpdate.isNotEmpty() && !already) {
-                        ClientTempStorageManager.getInstance().serverAddress?.let { a -> requireRestartAddresses.add(a) }
+                        val address = updateAddress
+                        val mods = toUpdate.toList()
+                        val serverAddress = ClientTempStorageManager.getInstance().serverAddress
                         mc.gui.setScreen(updatingScreen())
-                        Thread {
-                            for (data in toUpdate) {
-                                ModSyncer.getInstance().sync(updateAddress, data)
+                        Thread({
+                            try {
+                                ModSyncer.getInstance().syncAll(address, mods)
+                                mc.execute {
+                                    serverAddress?.let { a -> requireRestartAddresses.add(a) }
+                                    toUpdate = listOf()
+                                    updateAddress = ""
+                                    updating = false
+                                    mc.showRestartScreen()
+                                }
+                            } catch (error: Exception) {
+                                LOGGER_GENERAL.error("ModSync update failed", error)
+                                mc.execute { showUpdateError(address, error) }
                             }
-                            toUpdate = listOf()
-                            updateAddress = ""
-                            mc.execute { mc.showRestartScreen() }
-                            updating = false
-                        }.start()
+                        }, "ModSync download").apply { isDaemon = true; start() }
                     } else {
+                        updating = false
                         mc.closeScreen()
                     }
                 } else {
@@ -97,11 +128,23 @@ class ModSyncClient : ClientModInitializer {
 
     private fun updatingScreen() = ModsUpdatingScreen()
 
+    private fun showUpdateError(address: String, error: Exception) {
+        toUpdate = listOf()
+        updateAddress = ""
+        updating = false
+        val mc = Minecraft.getInstance()
+        mc.ensureCancelConnect()
+        mc.disconnect(DisconnectedScreen(TitleScreen(),
+            Component.translatable("modsync.update.error.title"),
+            Component.translatable("modsync.update.error.message", address, error.message ?: error.javaClass.simpleName)), true)
+    }
+
     private fun Minecraft.showRestartScreen() {
-        this.setScreenAndShow(ConfirmScreen(
+        this.gui.setScreen(ConfirmScreen(
             {
                 if (it) {
-                    this.close()
+                    // Let the main loop exit and perform normal shutdown before replacing jars.
+                    this.stop()
                 } else {
                     this.gui.setScreen(null)
                 }

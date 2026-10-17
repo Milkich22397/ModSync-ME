@@ -1,6 +1,8 @@
 package com.bleudev.modsync.client
 
 class ClientTempStorageManager {
+    @Volatile
+    var connectionAttempt: Long = 0
     var serverHost: String? = null
     var serverPort: Int? = null
     val serverAddress: String? get() {
@@ -9,7 +11,9 @@ class ClientTempStorageManager {
         return "$h:$p"
     }
 
+    @Volatile
     var downloadReadBytes: Long = 0
+    @Volatile
     var downloadTotalBytes: Long? = null
 
     companion object {
